@@ -2,34 +2,90 @@
 
 ## Project Summary
 
-In this project you will build and explain a small music recommender system.
+This project uses a simple, content-based filtering algorithm to recommend songs to users. In other words, it recommends songs that are acoustically/structurally similar to other songs the user has positively engaged with.
 
-Your goal is to:
-
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
-
-Replace this paragraph with your own summary of what your version does.
-
----
+--- 
 
 ## How The System Works
 
-Explain your design in plain language.
+Each song is assigned values for five continuous features: **energy**, **acousticness**, **valence**, **danceability**, and **tempo_bpm**. It is also tagged with a **genre** and a **mood**.
 
-Some prompts to answer:
+The user profile stores target values for each of those five features, plus a favorite genre and favorite mood:
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+| Profile field | Type | What it captures |
+|---|---|---|
+| `favorite_genre` | string | Preferred genre label (e.g. "pop") |
+| `favorite_mood` | string | Preferred mood label (e.g. "happy") |
+| `target_energy` | float 0–1 | How intense or calm the user likes songs |
+| `target_acousticness` | float 0–1 | Preference for acoustic vs. produced sound |
+| `target_valence` | float 0–1 | Preference for positive/upbeat vs. dark/melancholic |
+| `target_danceability` | float 0–1 | Preference for rhythmic, dance-friendly tracks |
+| `target_tempo_bpm` | float | Preferred beats per minute |
 
-You can include a simple diagram or bullet list if helpful.
+**Scoring a song** happens in two steps:
 
+1. **Weighted Euclidean distance** — all five continuous features are compared between the song and the user's targets. Tempo is normalized to a 0–1 scale (divided by 200) so it doesn't dominate. Each feature carries a weight that reflects how perceptibly different it sounds to a listener:
+
+   | Feature | Weight |
+   |---|---|
+   | energy | 2.0 |
+   | acousticness | 1.5 |
+   | valence | 1.5 |
+   | danceability | 1.0 |
+   | tempo (normalized) | 1.0 |
+
+   A smaller distance means the song is a closer match.
+
+2. **Genre and mood multipliers** — if a song's genre matches `favorite_genre`, its distance is halved (×0.5), making it rank much higher. If its mood matches `favorite_mood`, the distance is multiplied by ×0.75. These act as multipliers on the distance rather than arbitrary additive bonuses, so their effect scales proportionally with how different the song already is.
+
+The final **score** converts distance to a 0–1 value using `1 / (1 + distance)`, where 1.0 is a perfect match and scores closer to 0 signal a poor fit. Songs are ranked from highest to lowest score and the top K are returned.
+
+**Known limitations and biases**
+
+- If a user's favorite genre or mood is not present in the catalog, those multipliers never apply and the ranking falls back to continuous-feature distance alone — silently.
+- The feature weights above are designer assumptions, not values learned from real listening behavior. They will be a better fit for some users than others.
+- The catalog is small and reflects a limited range of cultural perspectives; genres and moods not represented cannot be recommended.
+- The system always returns the closest match and never introduces variety, which can create a filter bubble over time.
+
+## Data Flow
+
+```mermaid
+flowchart TD
+    A([User Taste Profile\nfavorite_genre · favorite_mood\ntarget_energy · target_acousticness\ntarget_valence · target_danceability · target_tempo_bpm])
+    B[(data/songs.csv\nid · title · artist · genre · mood\nenergy · tempo_bpm · valence\ndanceability · acousticness)]
+
+    A --> C
+    B --> D
+
+    C[Hold user prefs in memory]
+    D[Load all songs into a list of dicts]
+
+    D --> E
+
+    subgraph LOOP ["The Loop — repeat for every song"]
+        E[Pick next unscored song]
+        E --> F[Compute weighted Euclidean distance\nacross all 5 continuous features\nenergy×2.0 · acousticness×1.5 · valence×1.5\ndanceability×1.0 · tempo_normalized×1.0]
+        F --> G{Genre matches\nfavorite_genre?}
+        G -- Yes → multiply distance × 0.5 --> H{Mood matches\nfavorite_mood?}
+        G -- No → distance unchanged --> H
+        H -- Yes → multiply distance × 0.75 --> I[score = 1 ÷ (1 + distance)\nHigher score = closer match]
+        H -- No → distance unchanged --> I
+        I --> J[Append song + score + explanation\nto results list]
+        J --> K{More songs\nin CSV?}
+        K -- Yes --> E
+    end
+
+    K -- No --> L[Sort results list\nby score descending]
+    L --> M[Slice top K songs]
+    M --> N([Output: Ranked Recommendations\ntitle · score · explanation])
+
+    C --> F
+    C --> G
+    C --> H
+```
 ---
+![alt text](image.png)
+![alt text](image-1.png)
 
 ## Getting Started
 
