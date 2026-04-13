@@ -95,9 +95,9 @@ flowchart TD
 1. Create a virtual environment (optional but recommended):
 
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
+      python -m venv .venv
+      source .venv/bin/activate      # Mac or Linux
+      .venv\Scripts\activate         # Windows
 
 2. Install dependencies
 
