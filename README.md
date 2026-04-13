@@ -49,6 +49,7 @@ The final **score** converts distance to a 0–1 value using `1 / (1 + distance)
 
 ## Data Flow
 
+---
 flowchart TD
     A([User Taste Profile\nfavorite_genre · favorite_mood\ntarget_energy · target_acousticness\ntarget_valence · target_danceability · target_tempo_bpm])
     B[(data/songs.csv\nid · title · artist · genre · mood\nenergy · tempo_bpm · valence\ndanceability · acousticness)]
@@ -81,9 +82,10 @@ flowchart TD
     C --> F
     C --> G
     C --> H
-
 ---
+**Tests**
 ![alt text](image.png)
+**User Profiles**
 ![alt text](image-1.png)
 
 ## Getting Started
