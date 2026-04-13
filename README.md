@@ -49,36 +49,40 @@ The final **score** converts distance to a 0–1 value using `1 / (1 + distance)
 
 ## Data Flow
 
-```mermaid
+---
 flowchart TD
-    A([User Taste Profile])
-    B[(data/songs.csv)]
+    A([User Taste Profile \n favorite_genre · favorite_mood \n target_energy · target_acousticness \n target_valence · target_danceability · target_tempo_bpm])
+    B[(data/songs.csv\nid · title · artist · genre · mood\nenergy · tempo_bpm · valence\ndanceability · acousticness)]
 
-    A --> C[Hold user prefs in memory]
-    B --> D[Load all songs into a list of dicts]
+    A --> C
+    B --> D
+
+    C[Hold user prefs in memory]
+    D[Load all songs into a list of dicts]
+
     D --> E
 
-    subgraph LOOP [The Loop - repeat for every song]
+    subgraph LOOP ["The Loop — repeat for every song"]
         E[Pick next unscored song]
-        E --> F[Compute weighted Euclidean distance\nenergy x2.0, acousticness x1.5, valence x1.5\ndanceability x1.0, tempo normalized x1.0]
+        E --> F[Compute weighted Euclidean distance\nacross all 5 continuous features\nenergy×2.0 · acousticness×1.5 · valence×1.5\ndanceability×1.0 · tempo_normalized×1.0]
         F --> G{Genre matches\nfavorite_genre?}
-        G -->|Yes - multiply distance by 0.5| H{Mood matches\nfavorite_mood?}
-        G -->|No - distance unchanged| H
-        H -->|Yes - multiply distance by 0.75| I[score = 1 divided by 1 + distance\nHigher score = closer match]
-        H -->|No - distance unchanged| I
+        G -- Yes → multiply distance × 0.5 --> H{Mood matches\nfavorite_mood?}
+        G -- No → distance unchanged --> H
+        H -- Yes → multiply distance × 0.75 --> I[score = 1 ÷ (1 + distance)\nHigher score = closer match]
+        H -- No → distance unchanged --> I
         I --> J[Append song + score + explanation\nto results list]
-        J --> K{More songs?}
-        K -->|Yes| E
+        J --> K{More songs\nin CSV?}
+        K -- Yes --> E
     end
 
-    K -->|No| L[Sort by score descending]
+    K -- No --> L[Sort results list\nby score descending]
     L --> M[Slice top K songs]
-    M --> N([Output: Top K Recommendations])
+    M --> N([Output: Ranked Recommendations\ntitle · score · explanation])
 
     C --> F
     C --> G
     C --> H
-```
+---
 **Tests**
 ![alt text](image.png)
 **User Profiles**
@@ -90,7 +94,7 @@ flowchart TD
 
 1. Create a virtual environment (optional but recommended):
 
-   ```bash
+```bash
    python -m venv .venv
    source .venv/bin/activate      # Mac or Linux
    .venv\Scripts\activate         # Windows
